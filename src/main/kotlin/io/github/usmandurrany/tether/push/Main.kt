@@ -5,6 +5,7 @@ import io.github.usmandurrany.tether.core.BareJid
 import io.github.usmandurrany.tether.core.ConnectionState
 import io.github.usmandurrany.tether.core.TetherJvm
 import io.github.usmandurrany.tether.core.XmppConfig
+import io.github.usmandurrany.tether.transport.TlsConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +24,8 @@ import kotlin.system.exitProcess
  * - `RELAY_JID`, `RELAY_PASSWORD`: the XMPP account the relay logs in as (its own account, not a user's).
  * - `RELAY_RESOURCE`: fixed resource, `push` by default. Devices register `RELAY_JID/RELAY_RESOURCE`.
  * - `RELAY_HOST`, `RELAY_PORT`: optional, to skip DNS SRV.
+ * - `RELAY_TLS_PIN`: SHA-256 fingerprints of a self-signed server certificate to trust, comma-separated
+ *   (the probe in tether-xmpp prints it). Leave unset for servers with a public certificate.
  * - `RELAY_SECRET`: at least 16 random bytes, base64 (`openssl rand -base64 32`). Changing it invalidates every registration.
  * - `RELAY_ALLOWED_DOMAINS`: comma-separated servers allowed to push through the relay, such as `sure.im`. Empty allows any.
  * - `RELAY_INCLUDE_MESSAGE`: `true` forwards the sender and text the server includes; off by default.
@@ -65,6 +68,10 @@ fun main() {
         resource = resource,
         host = env("RELAY_HOST"),
         port = env("RELAY_PORT")?.toInt(),
+        tls = TlsConfig(
+            pinnedCertificateSha256 = env("RELAY_TLS_PIN")?.split(',')
+                ?.map { it.trim().lowercase().replace(":", "") }?.filter { it.isNotEmpty() }?.toSet().orEmpty(),
+        ),
     )
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val client = TetherJvm.client(config, scope, rememberLogin = false)

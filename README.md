@@ -37,6 +37,7 @@ Everything is set with environment variables, so no secret goes in the image or 
 | `RELAY_PASSWORD` | Its password |
 | `RELAY_RESOURCE` | `push` by default. Devices register `RELAY_JID/RELAY_RESOURCE` |
 | `RELAY_HOST`, `RELAY_PORT` | Optional, to connect without DNS SRV |
+| `RELAY_TLS_PIN` | SHA-256 fingerprint of a self-signed server certificate to trust, as the tether-xmpp probe prints it. Unset for public servers |
 | `RELAY_SECRET` | 32 random bytes, base64: `openssl rand -base64 32`. Changing it invalidates every registration |
 | `RELAY_ALLOWED_DOMAINS` | Servers allowed to push through the relay, comma-separated, such as `sure.im`. Empty allows any |
 | `RELAY_INCLUDE_MESSAGE` | `true` forwards the sender and text. Off by default |
@@ -92,6 +93,22 @@ gcloud run deploy tether-push --image $IMAGE --region $REGION --service-account 
 `--min-instances 1 --max-instances 1 --no-cpu-throttling` keep exactly one copy running with its connection open. Check it with `gcloud run services logs read tether-push --region $REGION`, which should show `Online as myapp-push@sure.im/push`.
 
 On an `e2-micro` VM, run the same image with Docker (`docker build -t tether-push .`) and the same variables. Attach the `push-relay` service account to the VM so no key file is needed.
+
+## On your own server (MongooseIM, ejabberd, Prosody, Openfire)
+
+Any server with XEP-0357 works the same way: give the relay an account on that server and register `that-account/push` in the app. On MongooseIM, `mod_event_pusher` with the `push` backend must be on (the server then advertises `urn:xmpp:push:0`). Use no `virtual_pubsub_hosts`, so notifications go to the relay instead of MongoosePush. For a server on your LAN, run the relay next to it rather than on Cloud Run, which can't reach your LAN:
+
+```sh
+docker build -t tether-push .
+docker run -d --restart unless-stopped --name tether-push \
+  -e RELAY_JID=push@nas.local -e RELAY_PASSWORD=... -e RELAY_SECRET=... \
+  -e RELAY_HOST=192.168.1.10 -e RELAY_TLS_PIN=<sha-256 of the server certificate> \
+  -e RELAY_ALLOWED_DOMAINS=nas.local -e FCM_PROJECT_ID=your-firebase-project-id \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/keys/sa.json -v ~/keys/myapp-service-account.json:/keys/sa.json:ro \
+  tether-push
+```
+
+It only needs to reach the XMPP server and, outbound, Firebase. Nothing has to reach it.
 
 ## In the app
 
