@@ -43,6 +43,7 @@ Everything is set with environment variables, so no secret goes in the image or 
 | `RELAY_INCLUDE_MESSAGE` | `true` forwards the sender and text. Off by default |
 | `FCM_PROJECT_ID` | Your Firebase project id. Found automatically on Google Cloud |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to a service-account key file. Leave unset on Cloud Run and Compute Engine, where the relay uses the service account it runs as |
+| `RELAY_DEBUG` | `true` prints every stanza in and out, to see what the XMPP server sends. SASL is redacted but FCM tokens are visible, so turn it off afterwards |
 | `PORT` | The plain-text status page (online state, forwarded and refused counts). `8080` by default; Cloud Run sets it |
 
 ## Build and run it locally

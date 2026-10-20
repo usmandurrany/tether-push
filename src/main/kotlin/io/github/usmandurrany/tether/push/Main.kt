@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer
 import io.github.usmandurrany.tether.core.BareJid
 import io.github.usmandurrany.tether.core.ConnectionState
 import io.github.usmandurrany.tether.core.TetherJvm
+import io.github.usmandurrany.tether.core.TrafficLogger
 import io.github.usmandurrany.tether.core.XmppConfig
 import io.github.usmandurrany.tether.transport.TlsConfig
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +33,7 @@ import kotlin.system.exitProcess
  * - `FCM_PROJECT_ID`: the Firebase project; read from the metadata server on Google Cloud when unset.
  * - `GOOGLE_APPLICATION_CREDENTIALS`: a service-account key file. Unset on Cloud Run or Compute Engine,
  *   where the relay uses the service account it runs as.
+ * - `RELAY_DEBUG`: `true` prints every stanza in and out (SASL redacted; tokens are visible). For debugging only.
  * - `PORT`: where the status page listens (Cloud Run sets it), 8080 by default.
  */
 fun main() {
@@ -74,7 +76,15 @@ fun main() {
         ),
     )
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val client = TetherJvm.client(config, scope, rememberLogin = false)
+    val logger = if (env("RELAY_DEBUG").toBoolean()) {
+        object : TrafficLogger {
+            override fun sent(xml: String) = println("-> $xml")
+            override fun received(xml: String) = println("<- $xml")
+        }
+    } else {
+        null
+    }
+    val client = TetherJvm.client(config, scope, rememberLogin = false, logger = logger)
     val relay = PushRelay(
         client = client,
         fcm = FcmHttpV1(projectId, tokens),

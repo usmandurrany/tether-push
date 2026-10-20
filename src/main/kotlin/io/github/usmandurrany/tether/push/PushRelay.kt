@@ -62,7 +62,11 @@ class PushRelay(
             type == "get" && stanza.child("query", DISCO_INFO) != null -> discoInfo(stanza)
             type == "set" && stanza.child("command", COMMANDS) != null -> register(stanza)
             type == "set" && stanza.child("pubsub", PUBSUB)?.child("publish", PUBSUB) != null -> publish(stanza)
-            else -> error(stanza, "cancel", "service-unavailable")
+            else -> {
+                val payload = stanza.elements.firstOrNull()
+                log("Answered service-unavailable to a $type from ${stanza.attribute("from")}: <${payload?.name} xmlns='${payload?.namespace}'>")
+                error(stanza, "cancel", "service-unavailable")
+            }
         }
         client.send(reply)
         return true
@@ -160,6 +164,7 @@ class PushRelay(
         return when (val outcome = fcm.send(token, data)) {
             FcmResult.Sent -> {
                 forwarded.incrementAndGet()
+                log("Forwarded a notification from $domain to FCM")
                 result(iq)
             }
             // Tells the device's server to stop: XEP-0357 §8 says it then disables this node.
