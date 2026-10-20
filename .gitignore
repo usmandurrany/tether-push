@@ -1,0 +1,11 @@
+.gradle/
+build/
+.kotlin/
+local.properties
+.idea/
+*.iml
+.DS_Store
+
+# Firebase / Google Cloud keys (never commit)
+*-service-account*.json
+*.env
